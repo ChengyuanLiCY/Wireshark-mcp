@@ -41,5 +41,10 @@ dev = [
 line-length = 88
 target-version = ["py38"]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["wireshark_mcp*"]
+exclude = ["web_interface*"]
+
 [tool.isort]
 profile = "black"

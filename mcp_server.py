@@ -8,7 +8,7 @@ from pathlib import Path
 import logging
 from typing import List, Dict, Any, Optional
 
-from fastmcp import Server, Tools
+from fastmcp import FastMCP
 
 # Import our Wireshark MCP functionality
 from wireshark_mcp import WiresharkMCP, Protocol
@@ -21,15 +21,13 @@ logger = logging.getLogger("wireshark-mcp")
 
 class WiresharkMCPServer:
     def __init__(self):
-        self.server = Server(
+        self.server = FastMCP(
             name="wireshark-mcp-server",
-            description="Wireshark Network Analysis - Model Context Protocol (MCP) Server for direct integration with Claude"
+            instructions="Wireshark Network Analysis - Model Context Protocol (MCP) Server for direct integration with Claude"
         )
-        
-        # Register tools
-        tools = Tools()
-        
-        @tools.tool("capture_live_traffic")
+
+        # Register tools using the FastMCP decorator
+        @self.server.tool("capture_live_traffic")
         def capture_live_traffic(
             interface: str = "any", 
             duration: int = 10, 
@@ -88,8 +86,8 @@ class WiresharkMCPServer:
                 # Clean up the temporary file
                 if os.path.exists(temp_file.name):
                     os.unlink(temp_file.name)
-        
-        @tools.tool("analyze_pcap")
+
+        @self.server.tool("analyze_pcap")
         def analyze_pcap(
             file_path: str,
             max_packets: int = 100,
@@ -136,8 +134,7 @@ class WiresharkMCPServer:
                 "statistics": context.get("statistics", {}),
                 "summary": context.get("summary", {})
             }
-            
-        @tools.tool("get_protocol_list")
+        @self.server.tool("get_protocol_list")
         def get_protocol_list() -> List[str]:
             """
             Get a list of supported protocols for filtering
@@ -146,9 +143,6 @@ class WiresharkMCPServer:
                 List of protocol names
             """
             return [p.name for p in Protocol]
-        
-        # Register the tools with the server
-        self.server.register_tools(tools)
     
     def run(self, host="127.0.0.1", port=5000, stdio=False):
         """
@@ -161,10 +155,10 @@ class WiresharkMCPServer:
         """
         if stdio:
             logger.info("Starting Wireshark MCP server with stdio transport")
-            self.server.serve_stdio()
+            self.server.run(transport="stdio")
         else:
             logger.info(f"Starting Wireshark MCP server with SSE transport on {host}:{port}")
-            self.server.serve_sse(host=host, port=port)
+            self.server.run(transport="sse", host=host, port=port)
 
 
 def main():
